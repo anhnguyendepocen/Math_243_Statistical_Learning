@@ -1,0 +1,140 @@
+---
+title: "Lab 2: Linear Regression"
+author: "Dean Young and Vikram Chan-Herur"
+output: 
+  html_document: 
+    highlight: pygments
+    theme: spacelab
+---
+
+```{r include=FALSE}
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+```
+
+#### Exercise 1
+
+```{r}
+ggplot(aes(x=mag,y=stations), data=quakes) + geom_point() + 
+  geom_jitter() +
+  xlab("Magnitude") + ylab("Stations Reporting") + ggtitle("Quakes")
+```
+
+#### Exercise 2
+
+We would expect the slope of the line to be 0. The y-intercept should be $\bar{y}$.
+
+#### Exercise 3
+
+``` {r}
+m1 <- lm(stations ~ mag, data = quakes)
+sum.m1 <- summary(m1)
+
+ggplot(aes(x=mag,y=stations), data=quakes) + geom_point() + geom_jitter() +
+  xlab("Magnitude") + ylab("Stations Reporting") + ggtitle("Quakes") +
+  geom_smooth(method="lm")
+
+summary(m1)
+
+```
+
+The slope of the model suggests that with each increase of 1 magnitude unit an additional 46 stations detect the earthquake. The intercept () describes a useless scenario: the number of stations that detect a earthquake of magnitude 0.
+
+#### Exercise 4
+
+```{r}
+quakes <- quakes %>% mutate(x.dev=mag-mean(mag),y.dev=stations-mean(stations),prod=x.dev*y.dev)
+ssd.mag <- (var(quakes$mag)*length(quakes$mag))
+beta1 <- sum(quakes$prod)/ssd.mag
+```
+
+Estimating the regression slope manually yields $\beta_1 =$ `r beta1` and R's built in `lm` function yields the same: $\beta_1 =$ `r coef(m1)["mag"]`.
+
+#### Exercise 5
+``` {r}
+
+### the regression as a function
+f <- function(x){
+  return (coef(sum.m1)[1] + (coef(sum.m1)[2] * x))
+}
+
+### calculate rss
+quakes <- quakes %>% mutate(stations.resid=(stations-f(mag))^2)
+rss <- sum(quakes$stations.resid)
+
+### calculate SE beta_1^hat
+
+se.beta1 <- sqrt(rss/m1$df)/sqrt(ssd.mag)
+
+### calculate confidence interval
+
+CI <- c(coef(sum.m1)[2] - qt(.975,df=m1$df)*se.beta1, coef(sum.m1)[2] + qt(.975,df=m1$df)*se.beta1)
+
+confint(m1, "mag", level = 0.95)
+```
+
+The lower bound on the slope is `r CI[1]` and the upper bound on the slope is `r CI[2]`.
+
+#### Exercise 6
+``` {r}
+f(7)
+```
+
+From the regression we should expect `r f(7)` stations to detect an earthquake of magnitude 7.0, however this requires us to extrapolate. Additionally, many points from about 5.0 to the maximum (near 6.5) are above the estimated slope (heteroskedasticity), suggesting that this is an underestimate. Given that the Richter scale is logarithmic, this linear model may not adequately describe the trend.
+
+#### Exercise 7
+
+1. Description
+2. Description
+3. Inference (and description)
+4. Inference (and description)
+5. Inference (and description)
+6. Prediction
+
+
+#### Exercise 8
+
+There is no exercise 8 on the lab.
+``` {r}
+
+```
+
+#### Exercise 9
+``` {r}
+simulation <- quakes %>% select(mag,stations) # We're lazy
+```
+
+#### Exercise 10
+We already made this function in exercise 5.
+```{r}
+simulation <- simulation %>% mutate(yhat = f(mag))
+
+```
+#### Exercise 11
+``` {r}
+sigma2 = rss/m1$df
+set.seed(76) # to get the same data every time
+
+simulation <- simulation %>% mutate(error = rnorm(1000,mean=0,sd=sqrt(sigma2)),y=yhat+error)
+```
+
+#### Exercise 12
+``` {r}
+ggplot(aes(x=mag,y=y), data=simulation) + geom_point() + 
+  geom_jitter() + geom_smooth(method="lm") +
+  xlab("Magnitude") + ylab("Stations Reporting") + ggtitle("Quakes - Simulated")
+```
+
+The simulation is similar to the original data in that it shows a positive correlation between magnitude and stations reporting. However, it appears to have a more equal variance in the residuals than the original data. By using a more flexible model (especially one that doesn't assume equal variance or linear shape) we may be able to better fit the data.
+
+```{r}
+sim_graph <- bind_rows(quakes %>% select(mag,stations) %>% mutate(Type="Orig"), 
+                       simulation %>% select(mag,y) %>% rename(stations=y) %>% mutate(Type="Sim"))
+
+ggplot(aes(x=mag,y=stations),data=sim_graph) + geom_point(aes(col=Type)) +
+  geom_jitter(aes(col=Type)) +
+  xlab("Magnitude") + ylab("Stations Reporting") + ggtitle("Quakes - Original vs. Simulated Data")
+```
+
+This graph gives a good visualization comparing the two data sets.

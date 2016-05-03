@@ -1,0 +1,72 @@
+---
+title: 'Lab 3: Regression Prediction Competition'
+author: "Dean Young - Evan Peairs"
+date: "2/15/2016"
+output: html_document
+---
+
+```{r, include=FALSE}
+library(MASS)
+library(dplyr)
+```
+
+In order to choose a set of predictors to fit our models, we began by fitting small set of predictors, each of which was chosen to be as independent of the others as possible. We then expanded the model by adding other predictors one at a time and checking that the significance of any of the coefficients did not decrease significantly. If one variable was indeed insignificant, this variable was removed and the fit re-evaluated.
+
+Race was fitted to a polynomial because communities of racial homogeneity showed low rates of crime, as opposed to highly heterogeneous communities which showed relatively high crime rates. Adding a polynomial term allowed for the trend to have a downward curvature, accounting for the low crime rates at the endpoints.
+
+```{r, echo=FALSE}
+group_A_fit <- function(training_data) {
+  crimedata <- read.csv(training_data) %>% rename(crime = ViolentCrimesPerPop)
+  M1 <- lm(crime~NumUnderPov + MalePctDivorce + PctPersDenseHous + pctUrban + racepctblack + I(racepctblack^2) + PctKids2Par, data=crimedata)
+  
+  return(M1)
+  
+}
+
+M1 <- group_A_fit("crime-train.csv")
+summary(M1)
+```
+
+All predictors are highly significant (p<0.01). The adjusted R-square is `r summary(M1)$adj.r.squared`.
+
+```{r, echo=FALSE}
+plot(M1, which=c(1,2,5))
+```
+
+There appears to be some heteroskedasticity in the model given the residuals plot. The response variable cannot be logged due to existence of 0's. Additionally, the assumption of normality in errors seems to be invalid according to the normal qq plot. In terms of prediction however, these issues are not as important since only standard errors are affected.
+
+```{r, echo=FALSE}
+group_A_MSE <- function(model, data) {
+  new_data <- read.csv(data) %>% rename(crime = ViolentCrimesPerPop)
+  fitted <- predict(model, newdata=new_data)
+  MSE <- (1/length(fitted)) * sum((fitted-new_data$crime)^2)
+  
+  return(MSE)
+}
+
+```
+
+The training MSE is `r group_A_MSE(M1,"crime-train.csv")`.
+
+
+To check how our model compares to an algorithmacally generated model, we used the `stepAIC` function from the `MASS` package to automatically generate a set of predictors by choosing the model that minimizes AIC.
+
+```{r, echo=FALSE, results="hide", cache=TRUE}
+step_AIC_fit <- function(training_data) {
+  crimedata <- read.csv(training_data) %>% rename(crime = ViolentCrimesPerPop)
+  new_crimedata <- bind_cols(crimedata[5:100], dplyr::select(crimedata,crime)) # Some columns are missing too much data
+  bigfit <- lm(crime ~. ,data= new_crimedata)
+  bigstep <- stepAIC(bigfit, direction='both')
+  
+  return(bigstep)
+  
+}
+
+bigstep <- step_AIC_fit("crime-train.csv")
+```
+```{r, echo=FALSE}
+summary(bigstep)
+```
+
+As we can see, the `stepAIC` model has an only marginaly better adjusted R squared value (`r summary(bigstep)$adj.r.squared` vs. `r summary(M1)$adj.r.squared`), at the cost of including a much larger set of predictors, each of which is much less significant than the ones we chose. The training MSE for the `stepAIC` model is roughly 15% lower (`r group_A_MSE(bigstep,"crime-train.csv")` vs. `r group_A_MSE(M1,"crime-train.csv")`).
+

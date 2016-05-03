@@ -1,0 +1,98 @@
+---
+title: "Math 243 Lab 1"
+author: "Dean Young"
+output: 
+  html_document: 
+    highlight: pygments
+    theme: spacelab
+---
+
+## Part II
+
+#### Exercise 1
+
+```{r, include=FALSE}
+# test
+library(MASS)
+library(dplyr)
+library(ggplot2)
+nrow(Boston)
+ncol(Boston)
+```
+There are  506 rows (observations of 1 suburb each) and 14 columns (variables).
+
+
+#### Exercise 2
+
+```{r, echo=FALSE}
+ggplot(aes(x=crim,y=medv),data=Boston) + geom_point() +
+  xlab("Per-Capita Crime Rate") + ylab("Median House Value (in $1000)") +
+  ggtitle("Boston Data Set")
+```
+
+This scatterplot shows the relationship between per-capita crime rate and median house value (in 1970s which explains low value of houses). Unsurprisingly, there appears to be a negative relationship. Note that a lot of the observations clump to the left side indicating that most of the suburbs in the data set are relatively safe.
+
+```{r, echo=FALSE}
+ggplot(aes(x=age,y=medv),data=Boston) + geom_point() +
+  xlab("Prop. of Houses Built Before 1940") + ylab("Median House Value (in $1000)") +
+  ggtitle("Boston Data Set")
+```
+
+This scatterplot shows the relationship between the proportion of houses built before 1940 (proxies for older suburbs) and median house value. Again it is unsurprising that older sururbs with older houses have lower median values. Many of the observations clump to the right (100% of houses were built before 1940). Boston is a very old city so this is unsurprising as well.
+
+#### Exercise 3
+
+```{r,echo=FALSE}
+summary(lm(crim~zn + indus + chas + nox + rm + age + dis + rad + tax + ptratio + black + lstat + medv, data=Boston))
+```
+
+The predictors that are statistically significantly associated with per-capita crime rate at the $\alpha$ =.05 level are proportion of residential zoning (+), weighted mean distance to five Boston employment centers (-), accessibility to radial highways (+), proportion of blacks (-), and median house value (-).
+
+The most economically significant variable of those five is distance to employment centers, lowering per-capita crime rate with a coefficient of nearly -1%. This relationship can be speculated to be caused by the fact that employed people live near their work and don't need to commit crime to survive.
+
+#### Exercise 4
+
+```{r, echo=FALSE}
+ggplot(aes(x=crim),data=Boston) + geom_histogram() +
+  xlab("Per-Capita Crime Rate") + ylab("Number of Suburbs")
+```
+
+The vast majority of suburbs have per-capita crime rates under 25. There are about 7 of 506 suburbs that have extreme crime rates but they are not the norm.
+
+```{r, echo=FALSE}
+ggplot(aes(x=tax),data=Boston) + geom_histogram() +
+  xlab("Property Tax per $10,000") + ylab("Number of Suburbs")
+```
+
+The vast majority of suburbs have a property tax rate between 1% and 5%. However, there is a significant amount (100+) of suburbs that are taxed nearly 7%. There is nothing in between 5% and 7% interestingly.
+
+```{r, echo=FALSE}
+ggplot(aes(x=ptratio),data=Boston) + geom_histogram() +
+  xlab("Pupil-Teacher Ratio") + ylab("Number of Suburbs")
+```
+
+The pupil-teacher ratio appears to mostly be distributed uniformly across a range of 12.5 to 22.5. The one major exception is that at around 20 pupil-teacher ratio, there are nearly 150 suburbs with this ratio.
+
+#### Exercise 5
+
+```{r}
+sum(Boston$chas)
+```
+
+There are 35 suburbs in this dataset that are bound to the Charles river.
+
+#### Exercise 6
+
+```{r}
+median(Boston$ptratio)
+```
+
+The median pupil-teacher ratio among towns in this data set is 19.05.
+
+#### Exercise 7
+
+```{r,echo=FALSE}
+summary(lm(medv~zn + indus + chas + nox + rm + age + dis + rad + tax + ptratio + black + lstat, data=Boston))
+```
+
+The output/response variable would be medv and the remaining variables are the input variables. According to a multiple regression, most predictors in the dataset do affect median house value.
