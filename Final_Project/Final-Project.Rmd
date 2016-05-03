@@ -1,0 +1,278 @@
+---
+title: "Math 243 Final Project"
+author: Dean, Hans, and Laura
+output: html_document
+---
+
+##Introduction
+
+Based off of data collected by a Psychology Today survey in the late 60s, we are modeling the frequency of extramarital affairs across 601 married individuals. We use tree-based methods to determine the most important variables and to establish a predictive model. We finally compare our results to those found in a 1978 paper written on the same dataset that utilizes a tobit modeling method, common in many econometric studies. 
+
+##The Data
+
+- How often engaged in extramarital sexual intercourse during the past year: ordinal, "nbaffairs"
+- Sex: categorical, "sex"
+- Age: ordinal, "age"
+- Number of years married: ordinal, "ym"
+- Children: categorical, "child"
+- How religious: ordinal, "religious"
+- Level of education: ordinal, "education"
+- Occupation: ordinal, "occupation"
+- Happiness rating of marriage: ordinal, "rate"
+
+Our data is based on a 1978 paper called “A Theory of Extramarital Affairs” which we downloaded through R's econometrics package. The data was collected through a magazine survey published in Psychology Today about a decade before the paper was published. There at 601 observations, each being a married individual. Our dependent variable is an ordinal measure of "how often engaged in extramarital sexual intercourse during the past year," which is measured on a scale from 0-12, 0 meaning none and 12 meaning either monthly, weekly, or daily. This variable was collected as continuous but compressed into an ordinal variable by the author of the paper for whatever reason. There are eight explanatory variables, 2 of which are binary and 6 which are ordinal. The binary explanatory variables are sex and whether or not the individual has children. The ordinal explanatory variables are age, number of years married, a measure of how religious they are, education level, occupation, and a rating of the happiness of their marriage. Once again, age and number of years married were measured as continuous but compressed as an ordinal variable by the author of the paper. 
+
+
+##Exploratory Data Analysis
+
+We plotted several of our variables to get an idea of the makeup of the dataset and the spread of our variables.
+
+
+```{r Packages_Load_Data, echo=F, include=FALSE}
+library(Ecdat)
+library(dplyr)
+library(ggplot2)
+library(tree)
+library(randomForest)
+library(AER)
+
+data(Fair)
+
+comp_mse <- function(model, testset, yname){
+
+  yhat <- predict(model, newdata=testset)
+  MSE <- mean((yhat - testset[[yname]])^2)
+  
+  return(MSE)
+}
+```
+
+```{r binary, echo=F}
+no_cheat <- dplyr::filter(Fair, nbaffairs == 0)
+cheat <- dplyr::filter(Fair, nbaffairs > 0)
+```
+
+```{r splitdata, echo=F}
+binary_affairs <- dplyr::mutate(Fair, had_affair = ifelse(nbaffairs == 0, "No", "Yes"))
+b_affairs_pct <- binary_affairs %>% group_by(sex, had_affair) %>% summarise(count=n()) %>% mutate(pct = (count/sum(count))*100) %>% dplyr::filter(had_affair == "Yes")
+
+```
+
+
+```{r graph1, echo=F, message=F}
+qplot(Fair$nbaffairs, geom="histogram") +
+  xlab("Affairs") + ylab("Count") + ggtitle("Graph 1")
+
+# # cheating versus not cheating groups bar graphs
+# qplot(no_cheat$sex, geom="bar") +
+#   xlab("Gender") + ylab("Count") + ggtitle("Faithful")
+# qplot(cheat$sex, geom="bar") +
+#   xlab("Gender") + ylab("Count") + ggtitle("Unfaithful")
+```
+
+"Graph 1" is a histogram of the spread of the affairs variable. As you can see, a majority of individuals in the dataset did not engage in an affair. 
+
+```{r graph 2, echo=F, message=F}
+qplot(Fair$child, geom="bar")+ ggtitle("Graph 2")
+```
+
+"Graph 2" displays the children variable of the dataset, showing that most individuals did have children.
+
+```{r graph 3, echo=F, message=F}
+qplot(cheat$ym, geom="histogram")+
+  xlab("Years of Marriage") + ylab("Count") + ggtitle("Graph 3")
+```
+
+"Graph 3" is a spead of the number of years married, but displays only the individuals who cheated at least once in the last year. Evidently, most individuals who were unfaithful were in a marriage of 12 or more years.
+
+```{r, echo=F, message=F}
+ggplot(binary_affairs, aes(x=sex, fill=had_affair)) +
+   geom_bar(position="fill") + 
+   xlab("Sex") + ylab("Proportion") + ggtitle("Graph 4")
+```
+
+"Graph 4" breaks the sex variable into two groups: those who had an affair and those who did not. It appears that this dataset represents men who cheat and women who cheat about equally.
+
+##Modeling
+
+```{r, Train/Test Set Partition, echo=FALSE}
+set.seed(76)
+ind <- sample(2, nrow(Fair), replace=TRUE, prob = c(.75,.25))
+Fair_train <- Fair[ind==1,]
+Fair_test <- Fair[ind==2,]
+
+b_Fair_train <- Fair_train %>% 
+  mutate(had_affair = as.factor(ifelse(nbaffairs == 0, "No", "Yes"))) %>% 
+  select(-nbaffairs)
+
+b_Fair_test <- Fair_test %>% 
+  mutate(had_affair = as.factor(ifelse(nbaffairs == 0, "No", "Yes"))) %>%
+  select(-nbaffairs)
+
+
+```
+
+```{r Tobit Model, echo=FALSE}
+
+tob <- tobit(nbaffairs~., data=Fair_train, left=0)
+summary(tob)
+
+# source: http://stats.stackexchange.com/questions/149091/censored-regression-in-r
+
+# must convert ystar to y (predict() only returns y*)
+mu <- predict(tob,newdata=Fair_test) # E[y*]
+sigma <- tob$scale # sigma
+
+p0 <- pnorm(mu/sigma) # P[y > 0]
+
+lambda <- function(x) dnorm(x)/pnorm(x)
+ey0 <- mu + sigma * lambda(mu/sigma) # E[y | y > 0]
+
+pred.y <- ey0*p0 # E[y | x] not conditional on y > 0
+
+tob.mse <- mean((pred.y-Fair_test$nbaffairs)^2)
+
+```
+
+Fair applied a censored regression model (Tobit) to predict the number of affairs using the predictive variables. He notes that the four important variables are `age`, `ym`, `rate`, `religious`. We applied the same model and found the same important variables. To establish a baseline for our non-parametric models to compare with, we computed the test MSE of the Tobit model which was `r tob.mse`.
+
+```{r Logistic Regression, echo=FALSE}
+l1 <- glm(had_affair ~ . , data=b_Fair_train, family="binomial")
+summary(l1)
+
+log_pred <- predict(l1, newdata = b_Fair_test, type = "response")
+log_pred <- ifelse(log_pred < .5, "No", "Yes")
+
+conf_mat_log <- table(log_pred, b_Fair_test$had_affair)
+conf_mat_log
+
+log.missclass <- (1/nrow(b_Fair_test)) * (conf_mat_log[2,1] + conf_mat_log[1,2])
+
+naive <- sum(b_Fair_test$had_affair == "Yes")/nrow(b_Fair_test)
+
+log.FP <- (conf_mat_log[2,1]/(sum(conf_mat_log[,1])))
+log.TP <- (conf_mat_log[2,2]/(sum(conf_mat_log[,1])))
+```
+
+Recall that Fair decomposed the continuous variable of number of affairs to the ordinal `nbaffairs`. This makes interpretation of the model slightly more difficult. To allow for better interpretation and also robustness check, we converted `nbaffairs` to `had_affair` which is a binary indicator of whether or not someone cheated. A logistic regression was used to establish a baseline. The confusion matrix is above and the test missclassifcation rate is `r log.missclass`. A naive predictor that predicts no one cheats has a test missclassfication rate of `r naive`. Our logistic model does slightly better.
+
+
+```{r CV-Tree, echo=FALSE}
+# Fit tree with training data
+t1 <- tree(nbaffairs ~ ., data=Fair_train)
+plot(t1)
+title(main="Unpruned Regression Tree")
+text(t1, pretty=0)
+
+t1.mse <- comp_mse(t1, Fair_test, "nbaffairs")
+
+# CV to select best size of tree
+set.seed(76)
+cv.tree.results <- cv.tree(t1)
+
+# Relationship between size and deviance
+plot(cv.tree.results$size, cv.tree.results$dev, type="b")
+
+# Pruned tree with size = 6
+prune.t1 <- prune.tree(t1,best=6)
+plot(prune.t1)
+title(main="Pruned Regression Tree")
+text(prune.t1, pretty = 0)
+
+prune.t1.mse <- comp_mse(prune.t1, Fair_test, "nbaffairs")
+```
+
+We fit a regression tree to the data. Given that our sample size is not large (`r nrow(Fair_train)`), the tree does not have many splits and is not too complex. However, just in case, we applied tree pruning and found that the best size of the tree is 6 based on deviance. This is not much smaller than the original tree, which explains why the test MSEs between the unpruned and the pruned tree is not very different: `r t1.mse` versus `r prune.t1.mse`. However, the pruned tree slightly outperforms the Tobit model (`r tob.mse`).
+
+The trees agree with the Tobit model that `rate` is the most important variable, as it is the first split in both trees. The trees also agree with the Tobit model that `religious` and `age` is important. Interestingly, `ym` does not appear for either tree. In fact, the unpruned tree uses `occupation`, which was not deemed important by the Tobit model.
+
+```{r Random Forest, echo=FALSE}
+set.seed(76)
+f1 <- randomForest(nbaffairs ~ ., data = Fair_train, importance=TRUE)
+varImpPlot(f1)
+
+f1.mse <- comp_mse(f1, Fair_test, "nbaffairs")
+
+```
+
+We also applied a Random Forest model to the data in an attempt to lower the variance of our estimates by compiling aggregate predictions. It is possible that the variables that appeared in the unpruned and pruned tree only occurred by chance. By using aggregate bootstrapped trees, we can get a more confident sense of what variables are important in predicting `nbaffairs`. According to the variance importance plot, the top four most important variables exactly match the top four most important variables in the Tobit model: `rate`, `ym`, `age`, `religious` with `rate` again being by far the most important. It is interesting to note that `education` is in the top three for creating more nodal purity. This variable was not important in any of the previous models, nor was it important in reducing training MSE of the Random Forest.
+
+This result is odd. `education` was important for increasing nodal purity by decreasing training RSS but not important for decreasing training MSE. RSS and MSE are highly related. The likely explanation for this is that the algorithm computing best reduction in RSS is doing so myopically, that is, at each individual step it is reducing the RSS to the best of its abilities. However, in a big picture view, `education` did not reduce training MSE very well.
+
+```{r Classification CV-Tree, echo=FALSE}
+# Fit tree with training data
+t2 <- tree(had_affair ~ ., data=b_Fair_train)
+plot(t2)
+title(main="Unpruned Classification Tree")
+text(t2, pretty=0)
+
+# CV to select best size of tree
+set.seed(76)
+cv.tree.results <- cv.tree(t2)
+
+# Relationship between size and deviance
+plot(cv.tree.results$size, cv.tree.results$dev, type="b")
+
+# Pruned tree with size = 6
+prune.t2 <- prune.tree(t2,best=6)
+plot(prune.t2)
+title(main="Pruned Classification Tree")
+text(prune.t2, pretty = 0)
+
+pred <- ifelse(predict(prune.t2,newdata=b_Fair_test)[,1] > .5, "No", "Yes")
+conf_mat <- table(pred, b_Fair_test$had_affair)
+conf_mat
+
+prune.missclass <- (1/nrow(b_Fair_test)) * (conf_mat[2,1] + conf_mat[1,2]) # missclassification rate of pruned tree
+
+prune.FP <- (conf_mat[2,1]/(sum(conf_mat[,1])))
+prune.TP <- (conf_mat[2,2]/(sum(conf_mat[,1])))
+
+```
+
+We ran the same methods used for the continuous-ordinal version of number affairs on the binary version of affairs (`had_affair`). The confusion matrix for the pruned classification tree is above. As you can see, in comparison to the confusion matrix for the logistic regression, the prune tree model was a lot more aggressive (less conservative) in predicting infidelity. This leads to slightly increased test true positives (`r log.TP` to `r prune.TP`) but a high increase in test false positives (`r log.FP` to `r prune.FP`).
+
+The test missclassification rate for the pruned tree is `r prune.missclass` which unfortunately is not better than the logistic regression. In fact, it does not even outperform the naive predictor which had a test missclassification rate of `r naive`.
+
+```{r Classification Random Forest, echo=FALSE}
+set.seed(76)
+f2 <- randomForest(had_affair ~ ., data = b_Fair_train, importance=TRUE)
+varImpPlot(f2)
+
+conf_mat_for <- table(predict(f2,newdata=b_Fair_test), b_Fair_test$had_affair)
+conf_mat_for
+
+for.missclass <- (1/nrow(b_Fair_test)) * (conf_mat_for[2,1] + conf_mat_for[1,2])
+
+for.FP <- (conf_mat[2,1]/(sum(conf_mat[,1])))
+for.TP <- (conf_mat[2,2]/(sum(conf_mat[,1])))
+```
+
+The Random Forest classification model exhibited similar characteristics as the regression version. The same four variables are the most important in accurate predictions: `rate`, `ym`, `age`, and `religious`. Again, the oddity of `education` being unimportant in helping predictions but important in increasing nodal purity appears here.
+
+For the Random Forest model the confusion matrix is extremely similar to the logistic model's confusion matrix, meaning they were both about equally conservative and certainly more conservative than the prune tree. However, the story isn't so happy when looking at test missclassification rates. The Random Forest test missclassification rate is `r for.missclass` which although is better than the pruned tree, still underperforms both the logistic model (`r log.missclass`) and the naive predictor (`r naive`).
+
+```{r Weighted Missclass, echo=FALSE}
+weights <- ifelse(b_Fair_test$had_affair == "No",1,3)
+prune.missclass.w <- (1/sum(weights)) * (conf_mat[2,1] + conf_mat[1,2]*3)
+log.missclass.w <- (1/sum(weights)) * (conf_mat_log[2,1] + conf_mat_log[1,2]*3)
+for.missclass.w <- (1/sum(weights)) * (conf_mat_for[2,1] + conf_mat_for[1,2]*3)
+naive.missclass.w <- (1/sum(weights)) * 3*sum(b_Fair_test$had_affair == "Yes")
+
+```
+
+The pruned tree model is being punished heavily for being overaggressive, that is, having too many false positives. But what if someone had trust issues and really wanted to catch cheaters, even at the expensive of some false positives? This person would rather an innocent spouse be accused of cheating than have a true cheater get away. For this person, false negatives are much worse than false positives. This can also be interpreted as saying the weight of classifying a true positive (a true cheater) should be higher than the weight of classifying a true negative (a true faithful partner). This can be reflected mathematically by assigning weights to each observation in the test data set and recomputing the test missclassification rate.
+
+The new missclassification rate would be:
+
+$$\frac{\sum_{i=1}^{N} w_{i}*IND(\hat{y_{i}} \neq y_{i})}{\sum_{i=1}^{N} w_{i}}$$
+
+where $w_{i}$ is the weight of the ith observations and IND() is the indicator function.
+
+In our case, $w_{i}$ for a true cheater was 3 and $w_{i}$ for a true faithful spouse was 1. When applying these weights in computing the test MSE, it is unsurprising that the pruned tree (`r prune.missclass.w`) outperforms both the logistic (`r log.missclass.w`) and the Random Forest (`r for.missclass.w`) models. This is because the pruned tree model is much more aggressive about declaring someone a cheater and thus is rewarded for catching true positives while not punishing false positives as strongly. This just shows that you can manipulate the performance ordering of models based on differing weights set on the observations, unbalancing the previously equal punishment of a false negative and a false positive.
+
+Source: [http://www.stat.cmu.edu/~ryantibs/datamining/lectures/25-boost.pdf](http://www.stat.cmu.edu/~ryantibs/datamining/lectures/25-boost.pdf)
+
+##Conclusion
+
+Our results were overall very similar to those found in the paper. Our regression and classification trees found the same 4 variables to be important as the paper did: Marriage rating, age, years married, and religiousity. By far, the rating of marriage variable was the most important in all of our models, always being the first split in the tree, rated most important from the random forest, and of the highest significance in the baseline models. In the regression sense, our results beat the tobit model in prediction, having a slightly lower MSE. The classification trees performed especially poorly, providing worse results than the naive model. However, if we use a pruned tree combined with the weighted misclassification error, we get results better than the logistic regression and regression trees. The main weakness in our analysis was the way the data was compressed in the original paper, removing an additional source of variation. Perhaps the survey they originally sent out was made poorly, only allowing respondents to indicate their age group and not differentiating between monthly, weekly, and daily. It would be interesting to perform a better survey with full continuous variables and see if we get the same results. 

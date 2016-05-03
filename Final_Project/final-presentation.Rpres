@@ -1,0 +1,283 @@
+Predicting Extramarital Affairs
+========================================================
+author: Dean Young, Hans Trautlein, Laura Dallago
+date: April 27, 2016
+autosize: true
+
+
+```{r Packages_Load_Data, echo=F, include=FALSE}
+library(Ecdat)
+library(dplyr)
+library(ggplot2)
+library(tree)
+library(randomForest)
+library(AER)
+
+data(Fair)
+
+comp_mse <- function(model, testset, yname){
+
+  yhat <- predict(model, newdata=testset)
+  MSE <- mean((yhat - testset[[yname]])^2)
+  
+  return(MSE)
+}
+
+
+binary_affairs <- dplyr::mutate(Fair, had_affair = ifelse(nbaffairs == 0, "No", "Yes"))
+b_affairs_pct <- binary_affairs %>% group_by(sex, had_affair) %>% summarise(count=n()) %>% mutate(pct = (count/sum(count))*100) %>% dplyr::filter(had_affair == "Yes")
+
+set.seed(76)
+ind <- sample(2, nrow(Fair), replace=TRUE, prob = c(.75,.25))
+Fair_train <- Fair[ind==1,]
+Fair_test <- Fair[ind==2,]
+
+b_Fair_train <- Fair_train %>% mutate(had_affair = ifelse(nbaffairs == 0, "No", "Yes")) %>%
+  select(-nbaffairs) %>% mutate(had_affair = as.factor(had_affair))
+
+b_Fair_test <- Fair_test %>% mutate(had_affair = ifelse(nbaffairs == 0, "No", "Yes")) %>%
+  select(-nbaffairs) %>% mutate(had_affair = as.factor(had_affair))
+
+```
+
+The Dataset
+========================================================
+
+- From Ray C. Fair's "A Theory of Extramarital Affairs," published in the *JPE* in 1978.
+- From last late 60s questionnaire in Psychology Today, n = 601.
+  - Sex (binary)
+  - Age (continuous to ordinal)
+  - Years Married (continuous to ordinal)
+  - Has Children (binary)
+  - Religiosity (Scale from 1-5, 5 being most religious)
+  - Education (continuous to ordinal based on years of education)
+  - Occupation (ordinal: higher level jobs = higher score)
+  - Self Rating of Marriage (Scale from 1-5, 5 being most satisfied)
+- Response = Number of Affairs In Past Year (continuous to ordinal: 0,1,2,3,7,12)
+
+The Paper
+========================================================
+
+- Uses parametric Tobit model
+- Based on censored distribution (Y $\geq$ 0 assumed)
+- Four most important:
+  - Marriage Rating (-)
+  - Age (-)
+  - Years Married (+)
+  - Religiosity (-)
+
+Looking at the Data, 1
+========================================================
+
+- Mostly no cheating
+- Only 6 unique values
+
+```{r look1, echo=FALSE}
+hist(Fair$nbaffairs,
+     xlab="Ordinal Number of Affairs in Past Year",
+     ylab="Count",
+     main="Histogram of Affairs")
+```
+
+***
+
+- Mostly satisfied
+- Low very unsatisfied -> Low cheating
+
+```{r look2, echo=F}
+hist(Fair$rate, breaks = c(0, 1, 2, 3, 4, 5), 
+     xlab="Rating of Marriage (Low to High)",
+     ylab="Count",
+     main="Histogram of Marriages Ratings"
+    )
+```
+
+Binary Cheating Variable
+========================================================
+
+```{r}
+b_Fair_train <- Fair_train %>% 
+  mutate(had_affair = as.factor(ifelse(nbaffairs == 0, "No", "Yes"))) %>% 
+  select(-nbaffairs)
+
+b_Fair_test <- Fair_test %>% 
+  mutate(had_affair = as.factor(ifelse(nbaffairs == 0, "No", "Yes"))) %>%
+  select(-nbaffairs)
+
+```
+
+Baseline Models
+========================================================
+
+## Tobit (Regression)
+
+- Same 4 significant variables (age weaker)
+- Produces y* instead of E[y|x]
+- Test MSE = 9.52
+
+```{r Tobit, echo=FALSE}
+tob <- tobit(nbaffairs~., data=Fair_train, left=0)
+
+
+```
+
+***
+
+## Logistic (Classification)
+
+- Also same 4 sig. variables (age weaker too)
+- Test M.C. Rate = 23.8%
+- Naive Model M.C. Rate = 24.5%
+```{r Logistic, echo=FALSE, fig.width=100, fig.height=50}
+l1 <- glm(had_affair ~ . , data=b_Fair_train, family="binomial")
+
+
+
+
+```
+
+Pruned Regression Tree
+========================================================
+
+- 3 of 4 important variables, no years married
+- Nuance in age
+- Test MSE = 9.519 (barely beats Tobit)
+
+```{r CV-Tree, echo=FALSE}
+# Fit tree with training data
+t1 <- tree(nbaffairs ~ ., data=Fair_train)
+
+t1.mse <- comp_mse(t1, Fair_test, "nbaffairs")
+
+# CV to select best size of tree
+set.seed(76)
+cv.tree.results <- cv.tree(t1)
+
+# Relationship between size and deviance
+plot(cv.tree.results$size, cv.tree.results$dev, type="b")
+
+# Pruned tree with size = 6
+prune.t1 <- prune.tree(t1,best=6)
+plot(prune.t1)
+title(main="Pruned Regression Tree")
+text(prune.t1, pretty = 0)
+```
+
+Random Forest Regression
+========================================================
+```{r Random Forest, echo=FALSE}
+set.seed(76)
+f1 <- randomForest(nbaffairs ~ ., data = Fair_train, importance=TRUE)
+varImpPlot(f1)
+```
+
+***
+
+- Same 4 important variables
+- Nodal purity???
+- Test MSE = 9.40
+
+Pruned Classification Tree
+========================================================
+
+```{r Classification CV-Tree, echo=FALSE}
+# Fit tree with training data
+t2 <- tree(had_affair ~ ., data=b_Fair_train)
+
+# CV to select best size of tree
+set.seed(76)
+cv.tree.results <- cv.tree(t2)
+
+# Relationship between size and deviance
+# plot(cv.tree.results$size, cv.tree.results$dev, type="b")
+
+# Pruned tree with size = 6
+prune.t2 <- prune.tree(t2,best=6)
+plot(prune.t2)
+title(main="Pruned Classification Tree")
+text(prune.t2, pretty = 0)
+```
+
+***
+
+- 4/4 important variables
+- Child?
+- Very aggresive in detecting cheaters
+- Test M.C. Rate = 27.8% (loses to both naive and logistic)
+
+```{r echo=FALSE}
+pred <- ifelse(predict(prune.t2,newdata=b_Fair_test)[,1] > .5, "No", "Yes")
+conf_mat <- table(pred, b_Fair_test$had_affair)
+conf_mat
+
+log_pred <- predict(l1, newdata = b_Fair_test, type = "response")
+log_pred <- ifelse(log_pred < .5, "No", "Yes")
+
+conf_mat_log <- table(log_pred, b_Fair_test$had_affair)
+conf_mat_log
+
+```
+
+Random Forest Classification
+========================================================
+
+```{r echo=FALSE}
+set.seed(76)
+f2 <- randomForest(had_affair ~ ., data = b_Fair_train, importance=TRUE)
+varImpPlot(f2)
+```
+
+***
+- 4/4 important variables
+- Education?
+- Much less aggresive
+- Test M.C. Rate = 25.2% (still does no better than naive or logistic)
+
+```{r echo=FALSE}
+conf_mat_for <- table(predict(f2,newdata=b_Fair_test), b_Fair_test$had_affair)
+conf_mat_for
+conf_mat_log
+```
+
+Weighted Missclassification Error, 1
+========================================================
+
+![](cheating_funny.jpg)
+
+***
+
+- False Positive $\neq$ False Negative
+- Catching cheaters > validating faithfulness
+- $$\frac{\sum_{i=1}^{N} w_{i}*IND(\hat{y_{i}} \neq y_{i})}{\sum_{i=1}^{N} w_{i}}$$
+- Reweight with $w_{i}$ = 3 if $y_{i}$ = "Yes" and 1 otherwise
+
+Weighted Missclassification Error, 2
+========================================================
+
+### Unweighted
+1. Logistic
+2. Naive
+3. Random Forest
+4. Pruned Tree
+
+***
+
+### Weighted
+1. Pruned Tree
+2. Logistic
+3. Random Forest
+4. Naive
+
+Conclusions
+========================================================
+### Regression:
+- Pruned tree, random forest model outperformed Tobit 
+
+### Classification:
+- Pruned tree, random forest model worse than naive
+- Weighted misclassification error improved results greatly
+
+### Overall:
+- Rating of marriage clearly most important
+- The compression of data is unfortunate
+
