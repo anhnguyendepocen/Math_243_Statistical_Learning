@@ -14,18 +14,21 @@ library(tidyr)
 ```
 
 #### Exercise 1
+#### Create a plot of the relationship between stations and magnitude. How would you characterize the relationship? (If you see overplotting, you may want to add jitter to your points or make them transparent by playing with the alpha value.)
 
 ```{r}
-ggplot(aes(x=mag,y=stations), data=quakes) + geom_point() + 
+ggplot(aes(x=mag,y=stations), data=quakes) + geom_point(alpha=.4) + 
   geom_jitter() +
   xlab("Magnitude") + ylab("Stations Reporting") + ggtitle("Quakes")
 ```
 
 #### Exercise 2
+#### Before you go ahead and fit a linear model to this trend, if in fact there was no relationship between the two, what would you expect the slope to be? What about the intercept?
 
 We would expect the slope of the line to be 0. The y-intercept should be $\bar{y}$.
 
 #### Exercise 3
+#### Ok, now go ahead and fit a linear model called m1 to the trend and add that line to the plot from exercise 1. Interpret your slope and intercept in the context of the problem.
 
 ``` {r}
 m1 <- lm(stations ~ mag, data = quakes)
@@ -42,6 +45,7 @@ summary(m1)
 The slope of the model suggests that with each increase of 1 magnitude unit an additional 46 stations detect the earthquake. The intercept () describes a useless scenario: the number of stations that detect a earthquake of magnitude 0.
 
 #### Exercise 4
+#### Verify the way that lm() has computed your slope correctly by using R to do the calculation using the equation for the slope based on X and Y.
 
 ```{r}
 quakes <- quakes %>% mutate(x.dev=mag-mean(mag),y.dev=stations-mean(stations),prod=x.dev*y.dev)
@@ -52,6 +56,7 @@ beta1 <- sum(quakes$prod)/ssd.mag
 Estimating the regression slope manually yields $\beta_1 =$ `r beta1` and R's built in `lm` function yields the same: $\beta_1 =$ `r coef(m1)["mag"]`.
 
 #### Exercise 5
+#### Using R, calculate a 95% confidence interval for the slope of the model that you fit in exercise 3. Confirm the calculation using confint().
 ``` {r}
 
 ### the regression as a function
@@ -77,6 +82,7 @@ confint(m1, "mag", level = 0.95)
 The lower bound on the slope is `r CI[1]` and the upper bound on the slope is `r CI[2]`.
 
 #### Exercise 6
+#### How many stations do you predict would be able to detect an earthquake of magnitude 7.0?
 ``` {r}
 f(7)
 ```
@@ -84,6 +90,7 @@ f(7)
 From the regression we should expect `r f(7)` stations to detect an earthquake of magnitude 7.0, however this requires us to extrapolate. Additionally, many points from about 5.0 to the maximum (near 6.5) are above the estimated slope (heteroskedasticity), suggesting that this is an underestimate. Given that the Richter scale is logarithmic, this linear model may not adequately describe the trend.
 
 #### Exercise 7
+#### Questions 1 - 6 in this lab involve elements of data description, inference, and/or prediction. Which was the dominant goal in each question?
 
 1. Description
 2. Description
@@ -101,17 +108,22 @@ There is no exercise 8 on the lab.
 ```
 
 #### Exercise 9
+#### Please simulate a data set that has the same number of observations as quakes. To start, generate a vector of x's. You can either generate your own x's or use the exact same x's as the quakes data.
 ``` {r}
 simulation <- quakes %>% select(mag,stations) # We're lazy
 ```
 
 #### Exercise 10
+#### Next, generate your y^y^'s (the value of the mean function at the observed x's). Please generate them by writing your own function of the form:
+
 We already made this function in exercise 5.
 ```{r}
 simulation <- simulation %>% mutate(yhat = f(mag))
 
 ```
+
 #### Exercise 11
+#### Now, generate the y's. Note that you'll need an estimate of ??2??2, for which you can use ??^2=RSS/n???2??^2=RSS/n???2. You can extract the vector of residuals with m1$res.
 ``` {r}
 sigma2 = rss/m1$df
 set.seed(76) # to get the same data every time
@@ -120,6 +132,8 @@ simulation <- simulation %>% mutate(error = rnorm(1000,mean=0,sd=sqrt(sigma2)),y
 ```
 
 #### Exercise 12
+#### Finally, make a plot of your simulated data. How is it similar to the original data? How is it different? How might you chance your model to make it more consistent with the data?
+
 ``` {r}
 ggplot(aes(x=mag,y=y), data=simulation) + geom_point() + 
   geom_jitter() + geom_smooth(method="lm") +
