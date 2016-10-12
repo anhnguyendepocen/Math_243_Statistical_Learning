@@ -10,6 +10,10 @@ library(MASS)
 library(dplyr)
 ```
 
+#### 1. Fitting the model
+
+#### Please write a function that takes the training data and the outputs an lm object. It should be of the form,
+
 In order to choose a set of predictors to fit our models, we began by fitting small set of predictors, each of which was chosen to be as independent of the others as possible. We then expanded the model by adding other predictors one at a time and checking that the significance of any of the coefficients did not decrease significantly. If one variable was indeed insignificant, this variable was removed and the fit re-evaluated.
 
 Race was fitted to a polynomial because communities of racial homogeneity showed low rates of crime, as opposed to highly heterogeneous communities which showed relatively high crime rates. Adding a polynomial term allowed for the trend to have a downward curvature, accounting for the low crime rates at the endpoints.
@@ -34,6 +38,10 @@ plot(M1, which=c(1,2,5))
 ```
 
 There appears to be some heteroskedasticity in the model given the residuals plot. The response variable cannot be logged due to existence of 0's. Additionally, the assumption of normality in errors seems to be invalid according to the normal qq plot. In terms of prediction however, these issues are not as important since only standard errors are affected.
+
+#### 2. Computing MSE
+
+#### Please write a function that takes as input the output from group_A_fit and a data set, and returns the MSE.
 
 ```{r, echo=FALSE}
 group_A_MSE <- function(model, data) {
