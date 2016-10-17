@@ -1,0 +1,256 @@
+---
+layout: page
+title: Problem Set 3
+author: Dean Young
+date: February 23, 2016
+permalink: /problem-sets/
+published: FALSE
+output: 
+  html_document: 
+    highlight: pygments
+    theme: spacelab
+---
+
+### Crime and Communities: applying the lasso
+
+You now have access to all of the materials for Lab 3: both data sets (`crime-train.csv` and `crime-test.csv`), every groups' code to fit and calculate MSE for their models (`test-lab-3.R`), and the slides (with code) containing the comparison plots (`results.Rmd`).
+
+#### 1
+Contruct 4 new models starting with the full set of predictors, picking 4 different
+values for $\lambda$, and finding the resulting lasso regression estimates. You can 
+reference the [code](http://andrewpbray.github.io/math-243/assets/week-04/penalized-regression.Rmd) used in the example in class or the example in the book in section
+6.6. Note that you'll simply be choosing your lambdas, not selecting them via cross-
+validation. You'll also want to remove any columns with missing values before you
+create the model matrix.
+
+```{r,message=FALSE}
+library(dplyr)
+library(glmnet)
+
+crime_data_train <- read.csv("crime-train.csv")
+crime_data_test <- read.csv("crime-test.csv")
+
+# Change "?" to NA
+crime_data_train[crime_data_train=="?"] = NA
+crime_data_test[crime_data_test=="?"] = NA
+
+# Remove columns with NA. Filter out communityname (model.matrix thinks it's a useable variable)
+crime_data_train <- crime_data_train[colSums(is.na(crime_data_train)) == 0] %>%
+  select(-communityname)
+crime_data_test <- crime_data_test[colSums(is.na(crime_data_test)) == 0] %>%
+  select(-communityname)
+
+X <- model.matrix(ViolentCrimesPerPop ~ ., data=crime_data_train)[,-1]
+Y <- crime_data_train$ViolentCrimesPerPop
+lambdas <- c(0,.01,.05,.1)
+
+rm1 <- glmnet(x = X, y = Y, alpha = 1, lambda = lambdas, standardize = TRUE)
+
+
+```
+
+
+#### 2
+Compute the training MSE for each of the four models. You can use your function in
+`test-lab-3.Rmd` for this, though you may need to modify it depending on how
+you had the function bring in the coefficients from the model object to make
+the prediction.
+
+```{r}
+
+MSE <- function(model, modelmatrix, y) {
+  fitted <- predict(model, newx=modelmatrix)
+  MSE <- colMeans((fitted-y)^2)
+  
+  return(MSE)
+}
+
+train_MSE <- MSE(rm1,X,Y)
+train_MSE
+
+```
+
+The least-squares estimate ($\lambda = 0$) had the best training MSE, which is predicted by theory. However, this should be different with the test MSE.
+
+#### 3
+Compute test MSE for each of the four models.
+
+```{r}
+X.test <- model.matrix(ViolentCrimesPerPop ~ ., data=crime_data_test)[,-1]
+Y.test <- crime_data_test$ViolentCrimesPerPop
+test_MSE <- MSE(rm1,X.test,Y.test)
+test_MSE
+```
+
+The least-squares estimate had a lower test MSE than training MSE whereas the lasso regression estimates all improved their MSE from the trainin set. 
+
+#### 4
+Compare the test MSE of these four models to your groups test MSE (in `results.Rmd`).
+Were you able to improve your predictions? Why do / why don't you think this happened?
+
+My group's (Group H) test MSE was 0.018. That model was only outperformed by the lasso regression when $\lambda = 0.01$. For $\lambda = 0.05, 0.1$, the lasso performed worse. The least squares regression also performed worse than my group's model. 
+
+It appears that the best fitting model required a shrinkage penalty to penalize large coefficients (favoring lower variance over higher bias). However, the penalty needed to be tiny, because after a larger increase in $\lambda$, the model started performing worse than my groups model (the increase in bias likely outweighed the decrease in variance).
+
+
+### Book exercises
+Exercise 14 in Ch. 3 and exercises 3 (all) and 9 (a-d) in Ch. 6.
+
+#### 14a
+
+```{r}
+set.seed(1)
+x1=runif(100)
+x2 =0.5* x1+rnorm(100)/10
+y=2+2*x1 +0.3*x2+rnorm(100)
+
+```
+
+$y = \beta_{0} + \beta_{1}x_{1} + \beta_{2}x_{2}$
+
+The coefficients are 2, 2, and 0.3 respectively for the $\beta$'s.
+
+#### 14b
+
+```{r}
+data14 <- data.frame(x1,x2,y)
+
+ggplot(aes(x=x1,y=x2),data=data14) + geom_point() +
+  geom_smooth(method="lm", se=FALSE) + 
+  ggtitle("Relationship Between X1 and X2")
+
+```
+
+Correlation coefficient is `r cor(x1,x2)`. The scatterplot shows a strong positive relationship between x1 and x2.
+
+#### 14c
+
+```{r}
+M1 <- lm(y ~ x1 + x2, data=data14)
+summary(M1)
+```
+
+Assuming $\alpha = 0.05$ moving forward.
+
+$\hat{\beta_{0}} =$ `r M1$coefficients[1]`
+$\hat{\beta_{1}} =$ `r M1$coefficients[2]`
+$\hat{\beta_{2}} =$ `r M1$coefficients[3]`
+
+$\beta_{0}$ has been estimated pretty well but the other two coefficients seem pretty off from their estimates. $\beta_{1} = 0$ can be rejected but $\beta_{2} = 0$ cannot.
+
+#### 14d
+
+```{r}
+M2 <- lm(y ~ x1, data=data14)
+summary(M2)
+```
+
+We are much more confident here that $\beta_{1}$ is not 0 (much lower p-value).
+
+#### 14e
+
+```{r}
+M3 <- lm(y ~ x2, data=data14)
+summary(M3)
+```
+
+We are now extremely confident that $\beta_{2}$ is not 0 as opposed to originally being unable to reject that null.
+
+#### 14f
+
+These results do not contradict each other. When we couldn't reject the null hyopthesis for $\beta_{2} = 0$, we were not saying that $\beta_{2}$ is in fact 0, just that there isn't enough evidence to say otherwise. This situation occurred due to multi-collinearity. Since x1 and x2 are so related, the regression model couldn't tell which one was actually affecting y. 
+
+In fact, if you look at the F-test p-value in the first regression with both $\beta$'s, you see that p-value is very low, indicating that the regression believes that at least ONE of the two x's are significant, but can't be sure which one or if both are significant due to collinearity.
+
+#### 14g
+
+```{r}
+
+x1 = c(x1, 0.1)
+x2 = c(x2, 0.8)
+y = c(y,6)
+
+M4 <- lm(y ~ x1 + x2)
+summary(M4)
+
+M5 <- lm(y ~ x1)
+summary(M5)
+
+M6 <- lm(y ~ x2)
+summary(M6)
+
+plot(M4, which=c(5))
+plot(M5, which=c(5))
+plot(M6, which=c(5))
+```
+
+This new observation makes $\beta_{2}$ significant as opposed to $\beta{1}$ in the complete model. It doesn't affect the other two models much.
+
+According to the Cook's distance plot, this outlier is both a high-leverage and an outlier for the complete model. It is neither for the model using just x1. Finally, it is a high leverage but not an outlier for the model using just x2.
+
+#### 9a
+
+```{r, message=FALSE}
+library(ISLR)
+ind <- sample(2, nrow(College), replace=TRUE, prob=c(0.67, 0.33))
+college.train <- College[ind==1,]
+college.test <- College[ind==2, ]
+
+```
+
+#### 9b
+
+```{r}
+N1 <- lm(Apps ~ .,data = college.train)
+
+lm_MSE <- function(model,data){
+  fitted <- predict(model, newdata = data)
+  MSE <- mean((fitted-data$Apps)^2)
+  
+  return(MSE)
+  
+}
+
+
+```
+
+Test MSE for least squares is $`r lm_MSE(N1,college.test)`$.
+
+#### 9c
+
+```{r}
+X.college.train <- model.matrix(Apps ~ ., data=college.train)[,-1]
+Y.college.train <- college.train$Apps
+
+X.college.test <- model.matrix(Apps ~ ., data=college.test)[,-1]
+Y.college.test <- college.test$Apps
+
+set.seed(76)
+cv.ridge.college <- cv.glmnet(x=X.college.train,y=Y.college.train,alpha=0)
+best.lamb.ridge <- cv.ridge.college$lambda.min
+
+best.ridge.college <- glmnet(x=X.college.train,y=Y.college.train,lambda=best.lamb.ridge,alpha=0)
+
+
+```
+
+Test MSE for best ridge regression is $`r MSE(best.ridge.college,X.college.test,Y.college.test)`$.
+The best $\lambda$ is `r round(best.lamb.ridge,2)`.
+
+#### 9d
+
+```{r}
+set.seed(76)
+cv.lasso.college <- cv.glmnet(x=X.college.train,y=Y.college.train,alpha=1)
+best.lamb.lasso <- cv.lasso.college$lambda.min
+
+best.lasso.college <- glmnet(x=X.college.train,y=Y.college.train,lambda=best.lamb.lasso,alpha=1)
+
+coef <- predict(best.lasso.college,type="coefficients",s=best.lamb.lasso)[1:18,]
+
+```
+
+Test MSE for best lasso regression is $`r MSE(best.lasso.college,X.college.test,Y.college.test)`$. The best $\lambda$ is `r round(best.lamb.lasso,2)`. The number of coefficients that are nonzero is 14 out of `r length(coef)`.
+
+#### Challenge problem
+Exercise 7 in Ch. 6.

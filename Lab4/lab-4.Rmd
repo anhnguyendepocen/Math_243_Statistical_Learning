@@ -20,7 +20,7 @@ war <- na.omit(war)
 
 # Question 1
 
-**Fit a logistic regression model for the start of civil war on all other variables except country and year (yes, this makes some questionable assumptions about independent observations); include a quadratic term for exports. Report the coefficients and their standard errors, together with R’s p-values. Which ones does R say are significant at the 5% level?**
+**Fit a logistic regression model for the start of civil war on all other variables except country and year (yes, this makes some questionable assumptions about independent observations); include a quadratic term for exports. Report the coefficients and their standard errors, together with R's p-values. Which ones does R say are significant at the 5% level?**
 
 ```{r}
 m1 <- war %>% glm(data=.,start ~ schooling + growth + peace 
