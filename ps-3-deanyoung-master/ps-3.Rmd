@@ -46,6 +46,7 @@ lambdas <- c(0,.01,.05,.1)
 
 rm1 <- glmnet(x = X, y = Y, alpha = 1, lambda = lambdas, standardize = TRUE)
 
+coef(rm1)
 
 ```
 
@@ -192,6 +193,7 @@ According to the Cook's distance plot, this outlier is both a high-leverage and 
 
 ```{r, message=FALSE}
 library(ISLR)
+set.seed(76)
 ind <- sample(2, nrow(College), replace=TRUE, prob=c(0.67, 0.33))
 college.train <- College[ind==1,]
 college.test <- College[ind==2, ]
@@ -228,6 +230,7 @@ Y.college.test <- college.test$Apps
 set.seed(76)
 cv.ridge.college <- cv.glmnet(x=X.college.train,y=Y.college.train,alpha=0)
 best.lamb.ridge <- cv.ridge.college$lambda.min
+cv.ridge.college$lambda
 
 best.ridge.college <- glmnet(x=X.college.train,y=Y.college.train,lambda=best.lamb.ridge,alpha=0)
 

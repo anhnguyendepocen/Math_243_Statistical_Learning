@@ -9,13 +9,14 @@ output:
 ```{r, include=FALSE}
 library(dplyr)
 library(magrittr)
+library(ggplot2)
 
 ```
 
 
 ### Past Performance, Future Results[^1]
 
-Our data set this week looks at the relationship between US stock prices, the earnings of the corporations, and the returns on investment in stocks, with returns counting both changes in stock price and dividends paid to stock holders. A corporation’s **earnings** in a given year is its income minus its expenses. The return on an investment over a year is the fractional change in its value, $(v_{t+1} - v_t)/v_t$, and the average rate of return over $k$ years is $[(v_{t+k} - v_t)/v_t]^{1/k}$.  
+Our data set this week looks at the relationship between US stock prices, the earnings of the corporations, and the returns on investment in stocks, with returns counting both changes in stock price and dividends paid to stock holders. A corporation's **earnings** in a given year is its income minus its expenses. The return on an investment over a year is the fractional change in its value, $(v_{t+1} - v_t)/v_t$, and the average rate of return over $k$ years is $[(v_{t+k} - v_t)/v_t]^{1/k}$.  
 
 Specifically, our data contains the following variables:
 
@@ -42,9 +43,11 @@ d %<>% na.omit()
 
 #b
 m1 <- lm(Return_10_fwd ~ MAPE, data=d)
+summary(m1)
 
 #c
 d$fold <- rep(1:5, length.out = nrow(d))
+set.seed(76)
 d$fold <- sample(d$fold)
 MSE_vec <- c()
 
