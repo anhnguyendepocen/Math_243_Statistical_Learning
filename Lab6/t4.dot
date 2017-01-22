@@ -1,0 +1,32 @@
+digraph Tree {
+node [shape=box] ;
+0 [label="PctKids2Par <= 0.445\nmse = 0.0551\nsamples = 800\nvalue = 0.2373"] ;
+1 [label="PctIlleg <= 0.675\nmse = 0.068\nsamples = 140\nvalue = 0.5654"] ;
+0 -> 1 [labeldistance=2.5, labelangle=45, headlabel="True"] ;
+2 [label="FemalePctDiv <= 0.555\nmse = 0.0526\nsamples = 86\nvalue = 0.47"] ;
+1 -> 2 ;
+3 [label="mse = 0.0262\nsamples = 21\nvalue = 0.3076"] ;
+2 -> 3 ;
+4 [label="mse = 0.0498\nsamples = 65\nvalue = 0.5225"] ;
+2 -> 4 ;
+5 [label="PctNotSpeakEnglWell <= 0.035\nmse = 0.055\nsamples = 54\nvalue = 0.7172"] ;
+1 -> 5 ;
+6 [label="mse = 0.0439\nsamples = 13\nvalue = 0.4623"] ;
+5 -> 6 ;
+7 [label="mse = 0.0314\nsamples = 41\nvalue = 0.798"] ;
+5 -> 7 ;
+8 [label="PctKids2Par <= 0.615\nmse = 0.0247\nsamples = 660\nvalue = 0.1677"] ;
+0 -> 8 [labeldistance=2.5, labelangle=-45, headlabel="False"] ;
+9 [label="PctPersDenseHous <= 0.085\nmse = 0.0345\nsamples = 217\nvalue = 0.2816"] ;
+8 -> 9 ;
+10 [label="mse = 0.0085\nsamples = 47\nvalue = 0.143"] ;
+9 -> 10 ;
+11 [label="mse = 0.0349\nsamples = 170\nvalue = 0.3199"] ;
+9 -> 11 ;
+12 [label="TotalPctDiv <= 0.415\nmse = 0.0105\nsamples = 443\nvalue = 0.1119"] ;
+8 -> 12 ;
+13 [label="mse = 0.0037\nsamples = 236\nvalue = 0.0719"] ;
+12 -> 13 ;
+14 [label="mse = 0.0144\nsamples = 207\nvalue = 0.1574"] ;
+12 -> 14 ;
+}

@@ -38,6 +38,7 @@ ggplot(df, aes(x = x1, y = x2, col = group, shape = group)) +
   scale_color_discrete(guide = FALSE) +
   scale_shape_discrete(guide = FALSE) +
   theme_bw()
+
 ```
 
 #### 1. Growing the full classification tree

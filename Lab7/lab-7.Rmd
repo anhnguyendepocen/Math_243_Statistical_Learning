@@ -65,6 +65,9 @@ letters_train <- slice(lettersdf, train)
 
 # Test data
 letters_test <- slice(lettersdf, -train)
+
+#write.csv(letters_train,"letters_train.csv",row.names=FALSE)
+#write.csv(letters_test,"letters_test.csv",row.names=FALSE)
 ```
 
 
@@ -74,6 +77,7 @@ Contruct a boosted tree to predict the class of the training images (the letters
 
 ```{r, cache=TRUE}
 
+set.seed(76)
 b1 <- gbm(letter ~ ., distribution = "multinomial", data=letters_train, n.trees=50, interaction.depth=1, shrinkage=0.1)
 
 summary(b1)
@@ -135,7 +139,7 @@ pair_missclass <- function(conf_mat){
   for(i in 2:nrow(conf_mat)){
     for(j in 1:(i-1)){
       num <- conf_mat[i,j] + conf_mat[j,i] # Total missclassified
-      denom <- sum(conf_mat[i, ]) + sum(conf_mat[j, ]) # Total appearance of either letter in test data
+      denom <- sum(conf_mat[, i]) + sum(conf_mat[, i]) # Total appearance of either letter in test data
       
       mc_rate <- num/denom
         
@@ -162,7 +166,7 @@ pair_miss %>% arrange(desc(Missclassed_Rate))
 
 **c. The letter E was by far the most difficult to predict.**
 
-**d. From `pair_miss` it appears that the pair of E and C had to highest total missclassification rate at 11%. This seems reasonable as the two letters look similar. E actually appears quite often in the highest missclassified pairs list, which makes sense considering our answer to part c.**
+**d. From `pair_miss` it appears that the pair of D and B had to highest total missclassification rate at 12%. This seems reasonable as the two letters look similar. E actually appears quite often in the highest missclassified pairs list, which makes sense considering our answer to part c.**
 
 
 #### Slow the learning
@@ -174,6 +178,7 @@ b. Are there any letter pairs that became particularly easier/more difficult to 
 
 ```{r, cache=TRUE}
 # a.
+set.seed(76)
 b2 <- gbm(letter ~ ., distribution = "multinomial", data=letters_train, n.trees=100, interaction.depth=1, shrinkage=0.01)
 summary(b2)
 
@@ -191,7 +196,25 @@ pair_miss2 %>% arrange(desc(Missclassed_Rate))
 
 **a. The new missclassification rate is `r missclass2` which is actually significantly worse than the first boosted model.**
 
-**b. L and A are now the most difficult to distinguish pair. This pair did not appear the top 10 most difficult pairs in the previous model. E and C the previous most difficult to distinguish pair is now the 4th most difficult, but is still more difficult in absolute (17% vs 11% total missclassification).**
+**b. Y and V are now the most difficult to distinguish pair. This pair did not appear the top 10 most difficult pairs in the previous model. D and B the previous most difficult to distinguish pair is now the 5th most difficult, but is still more difficult in absolute (14% vs 12% total missclassification).**
+
+```{r, cache=TRUE}
+# a.
+set.seed(76)
+b3 <- gbm(letter ~ ., distribution = "multinomial", data=letters_train, n.trees=100, interaction.depth=1, shrinkage=0.05)
+summary(b3)
+
+yhat3 <- predict(b3,newdata=letters_test, n.trees=100)
+predicted3 <- LETTERS[apply(yhat3, 1, which.max)]
+conf_mat3 <- table(predicted3, letters_test$letter)
+missclass3 <- (sum(conf_mat3)-sum(diag(conf_mat3)))/sum(conf_mat3)
+
+# b.
+pair_miss3 <- pair_missclass(conf_mat3)
+pair_miss3 %>% arrange(desc(Missclassed_Rate))
+
+
+```
 
 * * *
 

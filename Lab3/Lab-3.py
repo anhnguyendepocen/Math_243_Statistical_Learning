@@ -65,7 +65,7 @@ normal qq plot. In terms of prediction however, these issues are not as importan
 
 def group_A_MSE(model,csv):
     data = pd.read_csv(csv)
-    MSE = (1/len(model.fittedvalues)) * sum((model.fittedvalues - data["ViolentCrimesPerPop"])**2)
+    MSE = np.mean((model.fittedvalues - data["ViolentCrimesPerPop"])**2)
     return MSE
 
 m1_mse = group_A_MSE(m1,"crime-train.csv")

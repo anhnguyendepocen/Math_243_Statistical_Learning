@@ -100,18 +100,20 @@ p5.set_xlabel("Pupil-Teacher Ratio")
 p5.set_title("Boston Data Set")
 
 boston[boston["ptratio"] == 20.2].shape[0]
+boston[boston["ptratio"] == 20.2].shape[0]/boston.shape[0]
 
 """
 The pupil-teacher ratio appears to mostly be distributed uniformly across a range of 12.5 to 22.5. The one major exception 
 is that at the 20-21 pupil-teacher ratio bin, there is a significant spike. Upon further investigation, there are 
-140 suburbs with exactly 20.2 pupil-teacher ratio. I suspect this may be due to some policy that caps class sizes
- in certain schools.
+140 suburbs (28%) with exactly 20.2 pupil-teacher ratio. I suspect this may be due to some policy that caps class sizes
+in certain schools or lazy statistical reporting.
 """
 
 #### Exercise 5
 #### How many of the suburbs in this data set bound the Charles river?
 
 s = boston["chas"].sum()
+s
 
 """
 There are 35 suburbs in this dataset that are bound to the Charles river.
@@ -121,6 +123,7 @@ There are 35 suburbs in this dataset that are bound to the Charles river.
 #### What is the median pupil-teacher ratio among the towns in this data set?
 
 med = boston["ptratio"].median()
+med
 
 """
 The median pupil-teacher ratio among towns in this data set is 19.05.

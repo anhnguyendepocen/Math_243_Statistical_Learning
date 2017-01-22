@@ -18,6 +18,7 @@ library(dplyr)
 library(ggplot2)
 nrow(Boston)
 ncol(Boston)
+?Boston
 ```
 There are  506 rows (observations of 1 suburb each) and 14 columns (variables).
 
@@ -51,6 +52,8 @@ summary(lm(crim~zn + indus + chas + nox + rm + age + dis + rad + tax + ptratio +
 The predictors that are statistically significantly associated with per-capita crime rate at the $\alpha$ =.05 level are proportion of residential zoning (+), weighted mean distance to five Boston employment centers (-), accessibility to radial highways (+), proportion of blacks (-), and median house value (-).
 
 The most economically significant variable of those five is distance to employment centers, lowering per-capita crime rate with a coefficient of nearly -1%. This relationship can be speculated to be caused by the fact that employed people live near their work and don't need to commit crime to survive.
+
+The most economically significant variable overall is nitrogen oxide concentration by far with a coefficient of -10. It appears from further research that nitrogen oxide can come from industrial emissions [(Source)](http://whatsyourimpact.org/greenhouse-gases/nitrous-oxide-emissions). Industrial areas can be more secluded and more shady which can facilitate more crime.
 
 #### Exercise 4
 #### Are there any suburbs of Boston that appear to have particularly high crime rates? Tax rate? Pupil-teacher ratios? Comment on the range of each predictor.
