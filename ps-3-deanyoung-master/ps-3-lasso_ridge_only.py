@@ -63,7 +63,7 @@ def MSE(models,x,y):
         mse_list.append(mse)
 
     
-    return mse
+    return mse_list
 
 
 lasso_mse = MSE(l_list,crime_train_X,crime_train_Y)
@@ -124,7 +124,7 @@ lassocv.alpha_ # best alpha
 MSE([lm,encv,lassocv],college_test_X,college_test_Y)
 
 """
-The ridge model did very terribely compared to the ols and lasso model. 
+The ridge model did very terribley compared to the ols and lasso model. 
 The lasso model slightly outperformed the ridge model.
 """
 

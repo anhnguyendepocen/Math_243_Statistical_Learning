@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-# from sklearn.model_selection import train_test_split
 from sklearn.ensemble import GradientBoostingClassifier as gbm
 from sklearn.ensemble import GradientBoostingRegressor as gbm_reg
 
@@ -10,7 +9,6 @@ for i in range(1,17):
     df_head.append("V" + str(i))
 lettersdf = pd.read_csv("letters.csv", names=df_head)
 """
-# letters_train, letters_test = train_test_split(lettersdf, test_size = .25, random_state = 76)
 
 letters_train = pd.read_csv("letters_train.csv")
 letters_test = pd.read_csv("letters_test.csv")
@@ -43,7 +41,7 @@ def implist(model,features,ascending=False):
 
 def impplot(model,features,ascending=False,n=10):
     l = implist(model,features,ascending)
-    lsub = l.iloc[0:n-1,]
+    lsub = l.iloc[0:n-1,].copy()
     lsub.sort_values(by="importance",axis=0,inplace=True,ascending=True)
     ax = lsub.plot(kind="barh",x="features",y="importance")
     ax.set_ylabel("Features")

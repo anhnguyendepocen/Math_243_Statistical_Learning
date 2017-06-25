@@ -4,11 +4,14 @@ import subprocess
 from sklearn.tree import DecisionTreeClassifier as tree
 from sklearn.tree import DecisionTreeRegressor as tree_reg
 from sklearn.tree import export_graphviz
-from sklearn.grid_search import GridSearchCV
+from sklearn.model_selection import GridSearchCV
 from sklearn.ensemble import RandomForestRegressor as rf_reg
 from operator import itemgetter
 from time import time
 import numpy as np
+
+import os
+os.chdir("D:\Google Drive\Programming_Projects\Math_243_Statistical_Learning\Lab6")
 
 """
 In class, we estimated by eye the first split in a classification tree for the following shapely data set. 
@@ -76,10 +79,13 @@ In Python, the gini criteria produced exactly the same tree as the entropy crite
 """
 ### Crime and Communities, revisited
 
-In Lab 3, you fit a regression model to a training data set that predicted the crime rate in a community as a function of properties of that community.
+In Lab 3, you fit a regression model to a training data set that predicted the crime rate in a community as a function of properties of 
+that community.
 
 #### 3. Growing a pruned regression tree
-Fit a regression tree to the *training* data using the default splitting criteria (here, the deviance is essentially the RSS). Next, perform cost-complexity pruning and generate a plot showing the relationship between tree size and deviance to demonstrate the size of the best tree. Finally, construct the tree diagram for this best tree.
+Fit a regression tree to the *training* data using the default splitting criteria (here, the deviance is essentially the RSS). Next, 
+perform cost-complexity pruning and generate a plot showing the relationship between tree size and deviance to demonstrate the size of the 
+best tree. Finally, construct the tree diagram for this best tree.
 """
 
 # Import data
@@ -207,6 +213,13 @@ The pruned tree outperforms the unpruned tree meaning that the unpruned tree was
 the OLS regression model used in Lab 3 to fit the data outperformed both with an MSE of .019.
 """
 
+"""
+#### 5. Growing a random forest
+We now apply methods to decrease the variance of our estimates. Fit a `randomForest()` model that performs only bagging and no actual random 
+forests (recall that bagging is the special case of random forests with $m = p$). Next, fit a second random forest model that uses $m = p/3$. 
+Compute their test MSEs. Is this an improvement over the vanilla pruned regression tree? Does it beat your regression model?
+"""
+
 t5 = rf_reg(random_state=75,n_estimators=500, min_samples_split = 10, min_samples_leaf = 5, max_features=None #use all features for bagging
                 )
 t5.fit(crime_train_X,crime_train_Y)
@@ -229,7 +242,7 @@ a = implist(t6,crime_train_X.columns)
 
 def impplot(model,features,ascending=False,n=10):
     l = implist(model,features,ascending)
-    lsub = l.iloc[0:n-1,]
+    lsub = l.iloc[0:n-1,].copy()
     lsub.sort_values(by="importance",axis=0,inplace=True,ascending=True)
     ax = lsub.plot(kind="barh",x="features",y="importance")
     ax.set_ylabel("Features")

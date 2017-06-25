@@ -134,7 +134,7 @@ fwd_model_mse
 m1_mse
 
 """
-As we can see, the forward selection model has an only marginaly better adjusted R squared valu at the cost of including a 
+As we can see, the forward selection model has an only marginaly better adjusted R squared value at the cost of including a 
 much larger set of predictors, each of which is much less significant than the ones we chose. The training MSE for the 
 forward selection model is roughly 15% lower.
 """

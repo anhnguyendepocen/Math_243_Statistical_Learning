@@ -75,6 +75,7 @@ se.beta1 <- sqrt(rss/m1$df)/sqrt(ssd.mag)
 ### calculate confidence interval
 
 CI <- c(coef(sum.m1)[2] - qt(.975,df=m1$df)*se.beta1, coef(sum.m1)[2] + qt(.975,df=m1$df)*se.beta1)
+CI
 
 confint(m1, "mag", level = 0.95)
 ```

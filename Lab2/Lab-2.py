@@ -67,6 +67,7 @@ ydev = quakes["stations"] - quakes["stations"].mean()
 prod = xdev*ydev
 ssd_mag = quakes["mag"].var() * len(quakes["mag"])
 beta1 = sum(prod)/ssd_mag
+beta1
 
 """
 Estimating the regression slope manually gives the same value (46.235) as computed with ols.fit
@@ -166,6 +167,19 @@ p_both.set_ylabel("Stations Reporting")
 p_both.set_title("Quakes - Simulated/Original")
 p_both.legend(loc="upper left")
 
+
+simulation2 = pd.DataFrame()
+simulation2["stations"] = simulation["y_sim"]
+simulation2["mag"] = simulation["mag"]
+simulation2["datatype"] = "simulated"
+quakes["datatype"] = "original"
+quakes2 = quakes[["stations","mag","datatype"]]
+both = pd.concat([quakes2,simulation2])
+
+p_sim = sns.lmplot(x="mag",y="stations",data=both,fit_reg=False,x_jitter=0.1, hue="datatype", 
+                size=10)
+p_sim.set_axis_labels("Magnitude","Stations Reporting")
+p_sim.fig.suptitle("Quakes - Simulated vs Original", fontsize=34)
 """
 This graph gives a good visualization comparing the two data sets (original y vs simulated y).
 """

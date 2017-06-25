@@ -26,6 +26,7 @@ create the model matrix.
 ```{r,message=FALSE}
 library(dplyr)
 library(glmnet)
+library(ggplot2)
 
 crime_data_train <- read.csv("crime-train.csv")
 crime_data_test <- read.csv("crime-test.csv")
