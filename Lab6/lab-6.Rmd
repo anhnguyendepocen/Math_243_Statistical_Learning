@@ -151,11 +151,35 @@ MSE <- mean((yhat - crime_test_subset$ViolentCrimesPerPop)^2)
 We now apply methods to decrease the variance of our estimates. Fit a `randomForest()` model that performs only bagging and no actual random forests (recall that bagging is the special case of random forests with $m = p$). Next, fit a second random forest model that uses $m = p/3$. Compute their test MSEs. Is this an improvement over the vanilla pruned regression tree? Does it beat your regression model?
 
 ```{r, cache=TRUE}
+# set up parallel preocessing
+library(doParallel)
+library(foreach)
+
+cores <- detectCores()
+cl <- makeCluster(cores[1])
+registerDoParallel(cl)
+
+ptm <- proc.time()
 # Bagging (random forest with m = p = 96)
-bag.crime <- randomForest(ViolentCrimesPerPop ~ ., data=crime_train_subset, mtry=96, importance=TRUE)
+bag.crime <- foreach(ntree=rep(125,4), .combine=combine, .packages = 'randomForest') %dopar%
+              randomForest(ViolentCrimesPerPop ~ ., data=crime_train_subset, mtry=96, importance=TRUE, ntree=ntree)
+
+proc.time() - ptm
+
+# time the non parallel
+ptm <- proc.time()
+old.bag <- randomForest(ViolentCrimesPerPop ~ ., data=crime_train_subset, mtry=96, importance=TRUE)
+proc.time() - ptm
 
 # Random forest with m = p/3
-rf.crime <- randomForest(ViolentCrimesPerPop ~ ., data=crime_train_subset, importance=TRUE)
+ptm <- proc.time()
+rf.crime <- foreach(ntree=rep(125,4), .combine=combine, .packages = 'randomForest') %dopar%
+                      randomForest(ViolentCrimesPerPop ~ ., data=crime_train_subset, importance=TRUE, ntree=ntree)
+proc.time() - ptm
+
+ptm <- proc.time()
+old.rf <- randomForest(ViolentCrimesPerPop ~ ., data=crime_train_subset, importance=TRUE)
+proc.time() - ptm
 
 bag.yhat <- predict(bag.crime, newdata=crime_test_subset)
 bag.MSE <- mean((bag.yhat - crime_test_subset$ViolentCrimesPerPop)^2)
